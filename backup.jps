@@ -19,7 +19,7 @@ settings:
         values:
           1: Pre-defined
           2: Custom
-          3: Manual
+          3: Manual (crontab)
         showIf:
           1:
             - name: cronTime
@@ -94,7 +94,7 @@ settings:
               ((([\\\\*]{1}){1})|((\\\\*\\\\\\/){0,1}(([0-7]{1,}(-?[0-7]?(,[0-7]){0,6})){1}))|((sun|mon|tue|wed|thu|fri|sat)?(,(sun|mon|tue|wed|thu|fri|sat)){0,6})(-?\\w+?)?))$"
       - type: spinner
         name: backupCount
-        caption: N of stored backups
+        caption: Number of backups
         min: 1
         max: 10
         default: 5
