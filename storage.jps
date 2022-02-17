@@ -1,0 +1,38 @@
+type: install
+version: 1.8.1
+name: Backup storage for WordPress
+id: wp-restore
+logo: /images/backup-logo.png
+description: Storage node (single or fault-tolerant scalable GlusterFS cluster) for WordPress site backups (can be used with any WordPress environment available for current user).
+baseUrl: https://raw.githubusercontent.com/SiryjVyiko/wp-backup/master
+
+onBeforeInit: scripts/storageOnBeforeInit.js
+
+onInstall: 
+  - setupServer
+
+actions:
+  setupServer:
+    - install: 
+        jps: ${baseUrl}/storage-topology.jps
+        envName: ${settings.envName}
+        displayName: WP Backup Storage Server
+        settings: 
+          clusteredStorage: ${settings.clustered}
+          storageNodesCount: ${settings.storageNodesCount:1}
+          storageNodesSize: ${settings.storageSize:10}
+    - script: |
+        storageEnvGroups = eval('(' + MANIFEST + ')').envGroups;
+        if (!Array.isArray(storageEnvGroups)) {
+            storageEnvGroupsString = storageEnvGroups.toString();
+            storageEnvGroups = [];
+            if(storageEnvGroupsString.length != 0) {
+                storageEnvGroups.push(storageEnvGroupsString);
+            }
+        }
+        storageEnvGroups.push('WP Backup');
+        return jelastic.env.control.AttachEnvGroup({
+          envName    : '${settings.envName}',
+          session  : session,
+          envGroups: storageEnvGroups
+        });

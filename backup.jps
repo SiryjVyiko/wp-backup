@@ -1,0 +1,340 @@
+type: update
+version: 1.8.1
+name: Backup/restore addon for WordPress sites
+id: wp-backup
+logo: /images/backup-logo.png
+description: Backup add-on for WordPress sites. Can be used for creating and rotating backups (which contain webroot files abd DB dump) by the pre-defined schedule or any time on user demand.
+baseUrl: https://raw.githubusercontent.com/SiryjVyiko/wp-backup/master
+
+targetNodes:
+  nodeGroup: cp
+
+settings:
+  main:
+    fields:
+      - type: radio-fieldset
+        name: scheduleType
+        hidden: false
+        default: '1'
+        values:
+          1: Pre-defined
+          2: Custom
+          3: Manual
+        showIf:
+          1:
+            - name: cronTime
+              caption: Backup schedule
+              type: list
+              editable: false
+              values:
+                0 * * * * : "Hourly"
+                0 0 * * * : "Daily"
+                0 0 * * 0 : "Weekly"
+                0 0 1 * * : "Mountly"
+              default: 0 0 * * *
+          2:
+            - type: string
+              name: backupTime
+              caption: Time
+              inputType: time
+              default: "09:00"
+              cls: x-form-text
+              width: 120
+              required: true
+            - caption: Days
+              type: compositefield
+              name: days
+              defaultMargins: 0 12 0 0
+              items:
+                - name: sun
+                  value: true
+                  type: checkbox
+                  caption: Su
+                - name: mon
+                  value: true
+                  type: checkbox
+                  caption: Mo
+                - name: tue
+                  value: true
+                  type: checkbox
+                  caption: Tu
+                - name: wed
+                  value: true
+                  type: checkbox
+                  caption: We
+                - name: thu
+                  value: true
+                  type: checkbox
+                  caption: Th
+                - name: fri
+                  value: true
+                  type: checkbox
+                  caption: Fr
+                - name: sat
+                  value: true
+                  type: checkbox
+                  caption: Sa
+            - name: "tz"
+              caption: "Time Zone"
+              type: "list"
+              required: true
+              width: 250
+              editable: false
+              values: values
+          3:
+            - name: cronTime
+              caption: Backup schedule
+              type: string
+              default: 0 0 * * *
+              regexText: Cron syntax is incorrect!
+              regex: "^(((([\\\\*]{1}){1,})|((\\\\*\\\\\\/){0,1}(([0-9\\/\\*\\-\\,]{1}){1,}|(([1-5]{1}){1}([0-9\\/\\*\\-\\,]{1}){1,}){1})))
+              ((([\\\\*]{1}){1,})|((\\\\*\\\\\\/){0,1}(([0-9\\/\\*\\-\\,]{1}){1,}|(([1]{1}){1}([0-9\\/\\*\\-\\,-]{1}){1,}){1}|([2]{1}){1}([0-3]{1}){1})))
+              ((([\\\\*]{1}){1})|((\\\\*\\\\\\/){0,1}(([1-9]{1}){1}|(([1-2]{1}){1}([0-9\\/\\*\\-\\,]{1}){1,5}){1}|([3]{1}){1}([0-1]{1}){1})))
+              ((([\\\\*]{1}){1})|((\\\\*\\\\\\/){0,1}(([1-9]{1}){1}|(([1-2]{1}){1}([0-9\\/\\*\\-\\,]{1}){1,}){1}|([3]{1}){1}([0-1]{1}){1}))|(jan|feb|mar|apr|may|jun|jul|aug|sep|okt|nov|dec)(-?\\w+?)?)
+              ((([\\\\*]{1}){1})|((\\\\*\\\\\\/){0,1}(([0-7]{1,}(-?[0-7]?(,[0-7]){0,6})){1}))|((sun|mon|tue|wed|thu|fri|sat)?(,(sun|mon|tue|wed|thu|fri|sat)){0,6})(-?\\w+?)?))$"
+      - type: spinner
+        name: backupCount
+        caption: N of stored backups
+        min: 1
+        max: 10
+        default: 5
+      - caption: Backup Storage
+        type: list
+        name: storageName
+        dependsOn: region
+        
+  restore:
+    fields: []
+    onBeforeInit: |
+      import org.json.JSONObject;
+      var storageInfo = getStorageNodeid();
+      var storageEnvDomain = storageInfo.storageEnvShortName;
+      var storageEnvMasterId = storageInfo.storageNodeId;
+      var backupedEnvDomain = '${env.envName}';
+      
+      var backups = jelastic.env.control.ExecCmdById(storageEnvDomain, session, storageEnvMasterId, toJSON([{"command": "/root/getBackups.sh", "params": backupedEnvDomain}]), false, "root").responses[0].out;
+      var backupList = toNative(new JSONObject(String(backups))).backups;
+      var backupListPrepared = prepareBackups(backupList);
+      
+      function getStorageNodeid(){
+          var storageEnv = '${settings.storageName}'
+          var storageEnvShortName = storageEnv.split(".")[0]
+          var resp = jelastic.environment.control.GetEnvInfo(storageEnvShortName, session)
+          if (resp.result != 0) return resp
+          for (var i = 0; resp.nodes; i++) {
+              var node = resp.nodes[i]
+              if (node.nodeGroup == 'storage' && node.ismaster) {
+                  return { result: 0, storageNodeId: node.id, storageEnvShortName: storageEnvShortName };
+              }
+          }
+      }
+
+      function prepareBackups(values) {
+          var aResultValues = [];
+          values = values || [];
+          for (var i = 0, n = values.length; i < n; i++) {
+              aResultValues.push({
+                  caption: values[i],
+                  value: values[i]
+              });
+          }
+          return aResultValues;
+      }
+
+      settings.fields.push({
+          "caption": "Backup",
+          "type": "list",
+          "name": "backupDir",
+          "required": true,
+          "values": backupListPrepared
+      })
+
+      return settings;
+      
+onBeforeInit: |
+      var resp = jelastic.env.control.GetEnvs();
+      if (resp.result !== 0) return resp;
+      var envs = [];
+      var nodes = {};
+      for (var i = 0, envInfo, env; envInfo = resp.infos[i]; i++) {
+          if (envInfo.envGroups.includes("WP Backup")) {
+              env = envInfo.env
+              if (env.status == 1) {
+                  for (var j = 0, node; node = envInfo.nodes[j]; j++) {
+                      nodes[env.envName] = nodes[env.envName] || [];
+                      nodes[env.envName].groups = nodes[env.envName].groups || {};
+                      if (!nodes[env.envName].groups[node.nodeGroup]) nodes[env.envName].push({
+                          value: node.nodeGroup,
+                          caption: (node.displayName || node.name) + ' (' + node.nodeGroup + ')'
+                      });
+                      nodes[env.envName].groups[node.nodeGroup] = true;
+                  }
+                  if (nodes[env.envName] && nodes[env.envName].length > 0) {
+                      envs.push({
+                          value: env.envName,
+                          caption: (env.displayName || env.envName)
+                      });
+                  }
+              }
+          }
+      }
+
+      if (envs.length > 0) {
+          jps.settings.main.fields[2].values = envs;
+      }
+      
+      import java.util.TimeZone;
+      var zones = toNative(TimeZone.getAvailableIDs());
+      var values = {};
+
+      for (var i = 0, n = zones.length; i < n; i++) {
+        var offset = TimeZone.getTimeZone(zones[i]).getRawOffset()/3600000;
+        var m = offset % 1;
+        if (m != 0) m = Math.abs(m * 60);
+        if (m < 10) m = "0" + m;
+        var h = Math.floor(offset);
+        if (Math.abs(h) < 10) h = h < 0 ? "-0" + Math.abs(h) : "+0" + h; else if (h >= 0) h = "+" + h;
+        values[zones[i]] = zones[i] + (zones[i] == "GMT" ? "" : " (GMT" + h + ":" + m + ")");
+      }
+      
+      jps.settings.main.fields[0].showIf[2][2].values = values;
+      jps.settings.main.fields[0].showIf[2][2].value = values[0];
+      
+      return {
+          result: 0,
+          settings: jps.settings
+      };
+
+buttons:
+- caption: Backup Now
+  action: backup
+  loadingText: Backing up...
+  confirmText: Are you you want to initiate the backup process?
+  successText: The backup process has been finished successfully.
+
+- caption: Configure
+  action: configure
+  settings: main
+  loadingText: Configuring...
+  successText: The backup configs have been updated successfully.
+  
+- caption: Restore
+  action: restore
+  loadingText: Restoring...
+  settings: restore
+  successText: The backup had been successfully restored.
+
+globals:
+  scriptSufix: wp-backup
+
+onInstall:
+  - installRestic
+  - if ("${settings.scheduleType}" == 2):
+    - convert
+  - else:
+    - setGlobals:
+        cron: ${settings.cronTime}
+  - installScript:
+      cronTime: ${globals.cron}
+      backupCount: ${settings.backupCount}
+
+onUninstall:
+  callScript: uninstall
+
+onBeforeDelete:
+  callScript: uninstall
+  
+onAfterRedeployContainer[cp]:
+- installRestic
+
+startPage: ${env.url}
+
+actions:
+  installRestic:
+    cmd [cp]: |-
+      yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/copart/restic/repo/epel-7/copart-restic-epel-7.repo
+      yum-config-manager --enable copr:copr.fedorainfracloud.org:copart:restic
+      yum -y install restic
+      yum-config-manager --disable copr:copr.fedorainfracloud.org:copart:restic
+    user: root
+
+  installScript:
+    - getStorageCtid
+    - script: ${baseUrl}/scripts/create-backup-main-script.js?_r=${fn.random}
+      params:
+        scriptName: ${env.envName}-${globals.scriptSufix}
+        baseUrl: ${baseUrl}
+        cronTime: ${this.cronTime}
+        backupCount: ${this.backupCount}
+        userId: ${env.uid}
+        storageNodeId: ${response.storageCtid}
+        backupExecNode: ${nodes.cp.master.id}
+
+  callScript:
+    script: |-
+      var resp = jelastic.dev.scripting.Eval(appid, session, '${env.envName}-${globals.scriptSufix}', {action:"${this}"})
+      return resp.response || resp;
+
+  backup:
+    - callScript: backup
+    
+  restore:
+    - callScript: uninstall
+    - cmd[cp]: |-
+        jem service stop
+        SNAPSHOT_ID=$(RESTIC_PASSWORD="${env.name}" restic -r /opt/backup/ snapshots|grep '${settings.backupDir}'|awk '{print $1}')
+        RESTORE_TMP_DIR=$(mktemp -d)
+        RESTIC_PASSWORD="${env.name}" restic -r /opt/backup/ restore ${SNAPSHOT_ID} --target /
+        for i in DB_HOST DB_USER DB_PASSWORD DB_NAME; do declare "${i}"=$(cat /var/www.webroot/ROOT/wp-config.php |grep ${i}|awk \'{print $3}\'|tr -d "\'"); done
+        mysql -h ${DB_HOST} -u ${DB_USER} -p${DB_PASSWORD} < /root/${DB_NAME}.sql
+        rm -rf ${RESTORE_TMP_DIR} /root/${DB_NAME}.sql
+        jem service start
+      user: root
+    - callScript: install
+
+  configure:
+    - installScript:
+        cronTime: ${settings.cronTime}
+        backupCount: ${settings.backupCount}
+        
+  getStorageCtid:
+    - script: |-
+        var storageEnv = '${settings.storageName}'
+        var storageEnvShortName = storageEnv.split(".")[0]
+        var resp = jelastic.environment.control.GetEnvInfo(storageEnvShortName, session)
+        if (resp.result != 0) return resp
+        for (var i = 0; resp.nodes; i++) {
+            var node = resp.nodes[i]
+            if (node.nodeGroup == 'storage' && node.ismaster) {
+                return { result: 0, storageCtid : node.id};
+            }
+        }
+        
+  convert:
+    - script: |
+        var resp = {result:0, onAfterReturn: {setGlobals:{cron: ""}}}, offset = java.util.TimeZone.getTimeZone("${settings.tz}").getRawOffset(),
+            setGlobals = resp.onAfterReturn.setGlobals;
+        
+        var time = "${settings.backupTime}".split(":"),
+            d1 = new Date(2020, 1, 10, parseInt(time[0],10), parseInt(time[1],10)),
+            d2 = new Date(d1.getTime() - offset),
+            dd = d2.getDate() - d1.getDate(),
+            days = getDays([${settings.sun:0}, ${settings.mon:0}, ${settings.tue:0}, ${settings.wed:0}, ${settings.thu:0}, ${settings.fri:0}, ${settings.sat:0}], dd);
+
+        setGlobals.cron = d2.getMinutes() + " " + d2.getHours() + " * * " + days.join(",");
+
+
+        function getDays(settings, dd) {
+          var days = [];
+          for (var i = 0, n = settings.length; i < n; i++) {
+            if (settings[i]) {
+              var day = i + dd;
+              if (day < 0) day +=7; else if (day > 6) day -=7;
+              days.push(day);
+            }
+          }
+          days.sort();
+          return days;
+        }
+
+        return resp;
