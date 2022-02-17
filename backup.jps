@@ -229,14 +229,7 @@ globals:
 
 onInstall:
   - installRestic
-  - if ("${settings.scheduleType}" == 2):
-    - convert
-  - else:
-    - setGlobals:
-        cron: ${settings.cronTime}
-  - installScript:
-      cronTime: ${globals.cron}
-      backupCount: ${settings.backupCount}
+  - setSchedule
 
 onUninstall:
   callScript: uninstall
@@ -293,9 +286,7 @@ actions:
     - callScript: install
 
   configure:
-    - installScript:
-        cronTime: ${settings.cronTime}
-        backupCount: ${settings.backupCount}
+    - setSchedule
         
   getStorageCtid:
     - script: |-
@@ -338,3 +329,13 @@ actions:
         }
 
         return resp;
+
+  setSchedule:
+    - if ("${settings.scheduleType}" == 2):
+      - convert
+    - else:
+      - setGlobals:
+          cron: ${settings.cronTime}
+    - installScript:
+        cronTime: ${globals.cron}
+      backupCount: ${settings.backupCount}
