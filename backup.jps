@@ -338,4 +338,4 @@ actions:
           cron: ${settings.cronTime}
     - installScript:
         cronTime: ${globals.cron}
-      backupCount: ${settings.backupCount}
+        backupCount: ${settings.backupCount}
