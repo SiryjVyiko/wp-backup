@@ -240,8 +240,6 @@ onBeforeDelete:
 onAfterRedeployContainer[cp]:
 - installRestic
 
-startPage: ${env.url}
-
 actions:
   installRestic:
     cmd [cp]: |-
