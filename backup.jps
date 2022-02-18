@@ -1,9 +1,9 @@
 type: update
 version: 1.8.1
-name: Backup/restore addon for WordPress sites
+name: Backup/Restore for WordPress Sites
 id: wp-backup
 logo: /images/backup-logo.png
-description: Backup add-on for WordPress sites. Can be used for creating and rotating backups (which contain webroot files abd DB dump) by the pre-defined schedule or any time on user demand.
+description: Backup Add-On for WordPress sites. It can be used to create scheduled backups according to any required timezone and restore corrupted websites, even if the content has been completely deleted.
 baseUrl: https://raw.githubusercontent.com/SiryjVyiko/wp-backup/master
 
 targetNodes:
@@ -84,6 +84,10 @@ settings:
           3:
             - name: cronTime
               caption: Backup schedule
+              tooltip: "<span>A simple <a href=\"https://en.wikipedia.org/wiki/Cron#Overview\"> cron-based</a>
+    scheduler to automatically start and stop environment based on prescribed timing
+    instructions.</span><div><b>Note</b> that the required timestamps should be specified
+    respectively to the UTC time zone.</div>"              
               type: string
               default: 0 0 * * *
               regexText: Cron syntax is incorrect!
