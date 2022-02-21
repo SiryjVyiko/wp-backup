@@ -85,9 +85,9 @@ settings:
             - name: cronTime
               caption: Backup schedule
               tooltip: "<span>A simple <a href=\"https://en.wikipedia.org/wiki/Cron#Overview\"> cron-based</a>
-    scheduler to automatically start and stop environment based on prescribed timing
-    instructions.</span><div><b>Note</b> that the required timestamps should be specified
-    respectively to the UTC time zone.</div>"              
+    	      scheduler to automatically start the backup process based on prescribed timing
+    	      instructions.</span><div><b>Note</b> that the required timestamps should be specified
+    	      respectively to the UTC time zone.</div>"          
               type: string
               default: 0 0 * * *
               regexText: Cron syntax is incorrect!
@@ -99,11 +99,13 @@ settings:
       - type: spinner
         name: backupCount
         caption: Number of backups
+	tooltip: "The number of newest backups to be kept during rotation."
         min: 1
         max: 10
         default: 5
       - caption: Backup storage
         type: list
+	tooltip: "The environment with backup storage to be used for backups creation." 
         name: storageName
         dependsOn: region
         
