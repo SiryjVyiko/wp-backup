@@ -148,6 +148,7 @@ settings:
       settings.fields.push({
           "caption": "Backup",
           "type": "list",
+          "tooltip": "Select the time stamp for which you want to restore the contents of the web site",          
           "name": "backupDir",
           "required": true,
           "values": backupListPrepared
