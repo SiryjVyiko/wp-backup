@@ -8,8 +8,11 @@ var hasCollaboration = (parseInt('${fn.compareEngine(7.0)}', 10) >= 0),
     q = [];
 
 if (hasCollaboration) {
-    quotas = JSON.parse('${quota.data}');
-    quotas = [ quotas[STORAGE_NODE_DISK_LIMITATION], quotas[SAME_NODES], quotas[MAX_NODES] ];
+    quotas = [
+        { quota : { name: MAX_NODES }, value: parseInt('${quota.environment.maxnodescount}', 10) },
+        { quota : { name: SAME_NODES }, value: parseInt('${quota.environment.maxsamenodescount}', 10) },
+        { quota : { name: STORAGE_NODE_DISK_LIMITATION }, value: parseInt('${quota.storage.node.disk.limitation}', 10) }
+    ];
 } else {
     quotas = jelastic.billing.account.GetQuotas(STORAGE_NODE_DISK_LIMITATION + ";" + SAME_NODES + ";" + MAX_NODES).array || [];
 }
@@ -36,7 +39,7 @@ return {
         "default": "1",
         "values": {
           "1": "Standalone",
-          "2": "Cluster"
+          "2": "Cluster (GlusterFS) nodes"
         },
         "showIf": {
           "2": [
