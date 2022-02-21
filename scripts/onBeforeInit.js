@@ -5,6 +5,10 @@
         "name": "cronTime",
         "caption": "Backup schedule",
         "type": "list",
+        "tooltip": "<span>A simple <a href=\"https://en.wikipedia.org/wiki/Cron#Overview\"> cron-based</a>
+    scheduler to automatically start and stop environment based on prescribed timing
+    instructions.</span><div><b>Note</b> that the required timestamps should be specified
+    respectively to the UTC time zone.</div>",              
         "editable": true,
         "values": {
           "0 6 1/1 * *": "0 6 1/1 * *",
