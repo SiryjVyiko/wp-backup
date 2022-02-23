@@ -1,10 +1,12 @@
 type: install
-version: 1.8.1
+jpsVersion: 7.1.1
 name: Storage for WordPress
 id: wp-restore
 logo: /images/backup-logo.png
 description: Storage node (single or fault-tolerant scalable GlusterFS cluster) for WordPress site backups (can be used with any WordPress environment available for current user).
 baseUrl: https://raw.githubusercontent.com/SiryjVyiko/wp-backup/master
+categories:
+  - wordpress/extra
 
 onBeforeInit: scripts/storageOnBeforeInit.js
 
